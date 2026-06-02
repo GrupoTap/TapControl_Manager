@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TapParts S15 — reabertura e reenvio administrativo ao FieldTap — Engetap</title>
+<title>TapControl Manager — S18.0 — Engetap</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -433,7 +433,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
     <span class="ni-icon">👷</span> Técnicos de Campo
   </div>
   <div class="nav-item" onclick="setView('levantamentos',this)" id="nav-levantamentos">
-    <span class="ni-icon">📥</span> Levantamentos FieldTap
+    <span class="ni-icon">📥</span> Levantamentos TapControl Field
     <span class="ni-badge warn" id="badge-lev">0</span>
   </div>
 
@@ -455,7 +455,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <div class="gas-dot spin" id="gasDot"></div>
       <span id="gasLabel">Conectando ao GAS…</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;opacity:.5">TapParts · S17.2-Beta-RC1</div>
+    <div style="margin-top:6px;font-size:10px;opacity:.5">TapControl Manager · S18.0</div>
   </div>
 </div>
 
@@ -993,7 +993,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
         <textarea id="os-descricao" rows="3" placeholder="Inspeção NR-13, instalação de manômetros e válvulas de segurança..."></textarea>
       </div>
       <div class="field">
-        <label>Técnicos Vinculados <span style="color:var(--text3);font-weight:400">(FieldTap só exibe para estes técnicos)</span></label>
+        <label>Técnicos Vinculados <span style="color:var(--text3);font-weight:400">(TapControl Field só exibe para estes técnicos)</span></label>
         <div id="os-tecnicos-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:36px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;">
           <div style="color:var(--text3);font-size:12px;align-self:center" id="os-tecs-empty">Nenhum técnico vinculado — todos verão esta OS</div>
         </div>
@@ -1169,7 +1169,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <button class="modal-close" onclick="closeModal('modal-os-equips')">×</button>
     </div>
     <div class="modal-body">
-      <div class="info-box">Equipamentos vinculados a esta OS. O FieldTap exibirá exatamente esta lista para o inspetor.</div>
+      <div class="info-box">Equipamentos vinculados a esta OS. O TapControl Field exibirá exatamente esta lista para o inspetor.</div>
       <div id="oseq-list" style="margin-bottom:16px"></div>
       <div class="section-title" style="font-size:14px;margin-bottom:10px">Vincular equipamento existente</div>
       <div class="field">
@@ -1377,7 +1377,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-fase2')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarFase2()">🚗 Enviar Fase 2 ao FieldTap</button>
+      <button class="btn btn-primary" onclick="confirmarFase2()">🚗 Enviar Fase 2 ao TapControl Field</button>
     </div>
   </div>
 </div>
@@ -1861,12 +1861,12 @@ function renderOS() {
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="editarOS('${o.id_os}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="confirmarExclusao('os','${o.id_os}','OS '+o.numero_os)">🗑</button>
-          ${!isOSEncerrada(o) ? `<button class="btn btn-primary btn-sm" onclick="abrirModalFase2('${o.id_os}')" title="Enviar itens prontos para o FieldTap (Fase 2)" style="font-size:11px;padding:3px 8px">🚗 Fase 2</button>` : ''}
+          ${!isOSEncerrada(o) ? `<button class="btn btn-primary btn-sm" onclick="abrirModalFase2('${o.id_os}')" title="Enviar itens prontos para o TapControl Field (Fase 2)" style="font-size:11px;padding:3px 8px">🚗 Fase 2</button>` : ''}
           ${isOSFase2(o) ? `<button class="btn btn-ghost btn-sm" onclick="retrocederFase1('${o.id_os}')" title="Retroceder para Fase 1" style="font-size:11px;padding:3px 8px">↩ Fase 1</button>` : ''}
           ${isCampoConcluida ? `<button class="btn btn-ok btn-sm" onclick="encerrarOS('${o.id_os}')" style="font-size:11px;padding:3px 8px">✅ Encerrar OS</button>` : ''}
           ${(!isOSEncerrada(o) && !isCampoConcluida) ? `<button class="btn btn-ghost btn-sm" onclick="encerrarOS('${o.id_os}')" title="Encerrar OS" style="font-size:11px;padding:3px 8px;border-color:var(--ok);color:var(--ok)">✅ Encerrar</button>` : ''}
           ${isOSEncerrada(o) ? `<button class="btn btn-ghost btn-sm" onclick="reabrirOS('${o.id_os}')" title="Reabrir OS" style="font-size:11px;padding:3px 8px;border-color:var(--warn);color:var(--warn)">↩ Reabrir</button>` : ''}
-          ${['Aguardando TapParts','Fase 2 Campo Concluída','Encerrada'].includes(o.status) || ['aguardando_tapparts','campo_concluido'].includes(String(o.fase_atual)) ? `<button class="btn btn-ghost btn-sm" onclick="abrirAcaoFieldTapOS('${o.id_os}')" style="font-size:11px;padding:3px 8px">📲 FieldTap</button>` : ''}
+          ${['Aguardando TapParts','Fase 2 Campo Concluída','Encerrada'].includes(o.status) || ['aguardando_tapparts','campo_concluido'].includes(String(o.fase_atual)) ? `<button class="btn btn-ghost btn-sm" onclick="abrirAcaoFieldTapOS('${o.id_os}')" style="font-size:11px;padding:3px 8px">📲 TapControl Field</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -2721,74 +2721,143 @@ const catForms = {
       <div class="field"><label>Modelo (opcional)</label>
         <input type="text" id="cat-modelo" placeholder="Ex: 212.20" value="${item.modelo||''}">
       </div>
-    </div>
-    <div class="field">
-      <label>Requer calibração NR-13?</label>
-      <div class="toggle-row">
-        <div class="tog-opt ${!item.calib?'sel':''}" onclick="togOpt(this,'cat-calib')">Não</div>
-        <div class="tog-opt ${item.calib?'sel':''}" onclick="togOpt(this,'cat-calib')">Sim</div>
-      </div>
     </div>`,
 
   valvula: (item={}) => `
-    <div class="field-row">
-      <div class="field"><label>Bitola de entrada</label>
-        <select id="cat-bit-ent">${['1/8"','1/4"','3/8"','1/2"','3/4"','1"','1 1/4"','1 1/2"','2"','2 1/2"'].map(s=>`<option>${s}</option>`).join('')}</select>
-      </div>
-      <div class="field"><label>Tipo de entrada</label>
-        <div class="toggle-row">
-          <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-ent-v')">Roscada</div>
-          <div class="tog-opt" onclick="togOpt(this,'cat-tip-ent-v')">Flangeada</div>
-        </div>
+  <!-- TIPO DA VÁLVULA -->
+  <div class="field">
+    <label>Tipo de válvula *</label>
+    <div class="toggle-row" style="flex-wrap:wrap">
+      <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-valv');_onTipoValvChange()">Segurança</div>
+      <div class="tog-opt" onclick="togOpt(this,'cat-tip-valv');_onTipoValvChange()">Alívio</div>
+      <div class="tog-opt" onclick="togOpt(this,'cat-tip-valv');_onTipoValvChange()">Quebra vácuo</div>
+      <div class="tog-opt" onclick="togOpt(this,'cat-tip-valv');_onTipoValvChange()">Alívio/Quebra vácuo</div>
+    </div>
+  </div>
+
+  <!-- BITOLAS -->
+  <div class="field-row">
+    <div class="field"><label>Bitola de entrada</label>
+      <select id="cat-bit-ent">${['1/8"','1/4"','3/8"','1/2"','3/4"','1"','1 1/4"','1 1/2"','2"','2 1/2"'].map(s=>`<option>${s}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Tipo de entrada</label>
+      <div class="toggle-row">
+        <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-ent-v')">Roscada</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-tip-ent-v')">Flangeada</div>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Bitola de saída</label>
-        <select id="cat-bit-sai">${['1/8"','1/4"','3/8"','1/2"','3/4"','1"','1 1/4"','1 1/2"','2"','2 1/2"'].map(s=>`<option>${s}</option>`).join('')}</select>
-      </div>
-      <div class="field"><label>Tipo de saída</label>
-        <div class="toggle-row">
-          <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-sai-v')">Roscada</div>
-          <div class="tog-opt" onclick="togOpt(this,'cat-tip-sai-v')">Flangeada</div>
-          <div class="tog-opt" onclick="togOpt(this,'cat-tip-sai-v')">Difusa</div>
-        </div>
+  </div>
+
+  <!-- TIPO DE ROSCA -->
+  <div class="field">
+    <label>Tipo de rosca</label>
+    <div class="toggle-row">
+      <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-rosca-v')">NPT</div>
+      <div class="tog-opt" onclick="togOpt(this,'cat-tip-rosca-v')">BSP</div>
+    </div>
+  </div>
+
+  <!-- BITOLA SAÍDA -->
+  <div class="field-row">
+    <div class="field"><label>Bitola de saída</label>
+      <select id="cat-bit-sai">${['1/8"','1/4"','3/8"','1/2"','3/4"','1"','1 1/4"','1 1/2"','2"','2 1/2"'].map(s=>`<option>${s}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Tipo de saída</label>
+      <div class="toggle-row">
+        <div class="tog-opt sel" onclick="togOpt(this,'cat-tip-sai-v')">Roscada</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-tip-sai-v')">Flangeada</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-tip-sai-v')">Difusa</div>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Fluido</label>
-        <div class="toggle-row">
-          <div class="tog-opt sel" onclick="_togFluidoValv(this)">AR</div>
-          <div class="tog-opt" onclick="_togFluidoValv(this)">Vapor</div>
-          <div class="tog-opt" onclick="_togFluidoValv(this)">Gás</div>
-          <div class="tog-opt" onclick="_togFluidoValv(this)">Líquido</div>
-          <div class="tog-opt" onclick="_togFluidoValv(this)">Outros</div>
-        </div>
-        <input type="text" id="cat-flu-esp-v" placeholder="Especificar fluido" style="display:none;margin-top:6px">
+  </div>
+
+  <!-- FLUIDO + PRESSÃO DE ABERTURA (alívio ou segurança) -->
+  <div class="field-row">
+    <div class="field"><label>Fluido</label>
+      <div class="toggle-row">
+        <div class="tog-opt sel" onclick="_togFluidoValv(this)">AR</div>
+        <div class="tog-opt" onclick="_togFluidoValv(this)">Vapor</div>
+        <div class="tog-opt" onclick="_togFluidoValv(this)">Gás</div>
+        <div class="tog-opt" onclick="_togFluidoValv(this)">Líquido</div>
+        <div class="tog-opt" onclick="_togFluidoValv(this)">Outros</div>
       </div>
-      <div class="field"><label>Pressão de abertura (PA) — kgf/cm²</label>
-        <input type="number" id="cat-pa" step="0.5" placeholder="Ex: 10.0" value="${item.pa_kgf||item.pa||''}">
-      </div>
+      <input type="text" id="cat-flu-esp-v" placeholder="Especificar fluido" style="display:none;margin-top:6px">
     </div>
-    <div class="field-row">
-      <div class="field"><label>Material</label>
-        <div class="toggle-row">
-          <div class="tog-opt sel" onclick="togOpt(this,'cat-mat')">Aço inox</div>
-          <div class="tog-opt" onclick="togOpt(this,'cat-mat')">Aço carbono</div>
-          <div class="tog-opt" onclick="togOpt(this,'cat-mat')">Bronze</div>
-        </div>
-      </div>
-      <div class="field"><label>Marca</label>
-        <select id="cat-marca-v">
-          <option>Leser</option><option>Swagelok</option><option>Herose</option>
-          <option>Fluid Controls</option>
-          <option>Outra</option>
+  </div>
+
+  <!-- PRESSÃO DE ABERTURA — campo simples (padrão) -->
+  <div class="field" id="cat-pa-wrap-simples">
+    <label>Pressão de abertura (PA)</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="number" id="cat-pa" step="0.1" placeholder="Ex: 10.0" style="flex:1" value="${item.pa_kgf||item.pa||''}">
+      <select id="cat-pa-unit" style="width:110px">
+        <option>kgf/cm²</option><option>bar</option><option>mbar</option>
+        <option>psi</option><option>Pa</option><option>MPa</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- PRESSÃO DUPLA — alívio/quebra vácuo (oculto por padrão) -->
+  <div id="cat-pa-wrap-duplo" style="display:none">
+    <div class="field">
+      <label>Pressão de alívio (PA)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="cat-pa-alivio" step="0.1" placeholder="Ex: 10.0" style="flex:1">
+        <select id="cat-pa-alivio-unit" style="width:110px">
+          <option>kgf/cm²</option><option>bar</option><option>mbar</option>
+          <option>psi</option><option>Pa</option><option>MPa</option>
         </select>
-        <input type="text" id="cat-marca-v-outra" placeholder="Informe a marca" style="display:none;margin-top:6px">
       </div>
     </div>
-    <div class="field"><label>Modelo (opcional)</label>
-      <input type="text" id="cat-modelo-v" placeholder="Ex: 459.0" value="${item.modelo||''}">
-    </div>`,
+    <div class="field">
+      <label>Pressão de vácuo (PV)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="cat-pa-vacuo" step="0.1" placeholder="Ex: -0.5" style="flex:1">
+        <select id="cat-pa-vacuo-unit" style="width:110px">
+          <option>kgf/cm²</option><option>bar</option><option>mbar</option>
+          <option>psi</option><option>Pa</option><option>MPa</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- PMTA -->
+  <div class="field">
+    <label>PMTA do equipamento (Pressão Máxima de Trabalho Admissível)</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="number" id="cat-pmta-v" step="0.1" placeholder="Ex: 12.0" style="flex:1">
+      <select id="cat-pmta-v-unit" style="width:110px">
+        <option>kgf/cm²</option><option>bar</option><option>mbar</option>
+        <option>psi</option><option>Pa</option><option>MPa</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- MATERIAL + MARCA -->
+  <div class="field-row">
+    <div class="field"><label>Material</label>
+      <div class="toggle-row" style="flex-wrap:wrap">
+        <div class="tog-opt sel" onclick="togOpt(this,'cat-mat')">Aço inox</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-mat')">Aço carbono</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-mat')">Bronze</div>
+        <div class="tog-opt" onclick="togOpt(this,'cat-mat')">Latão</div>
+      </div>
+    </div>
+    <div class="field"><label>Marca</label>
+      <select id="cat-marca-v" onchange="_onMarcaValvChange()">
+        <option>Swagelok</option><option>Fluid Controls</option>
+        <option>ChaoChao</option><option>Chaveirinho</option>
+        <option>Spirax Sarco</option><option>W Burger</option>
+        <option>Emerson</option>
+        <option>Outra</option>
+      </select>
+      <input type="text" id="cat-marca-v-outra" placeholder="Informe a marca" style="display:none;margin-top:6px">
+    </div>
+  </div>
+
+  <div class="field"><label>Modelo (opcional)</label>
+    <input type="text" id="cat-modelo-v" placeholder="Ex: SIL526" value="${item.modelo||''}">
+  </div>`,
 
   purgador: (item={}) => `
     <div class="field"><label>Tipo de purgador</label>
@@ -2878,6 +2947,17 @@ function _togFluidoValv(el) {
     if (!precisa) esp.value = '';
   }
 }
+function _onTipoValvChange() {
+  const tipo = getTogVal('cat-tip-valv') || 'Segurança';
+  const duplo = tipo === 'Alívio/Quebra vácuo';
+  document.getElementById('cat-pa-wrap-simples').style.display = duplo ? 'none' : '';
+  document.getElementById('cat-pa-wrap-duplo').style.display = duplo ? '' : 'none';
+}
+function _onMarcaValvChange() {
+  const v = document.getElementById('cat-marca-v')?.value;
+  const outro = document.getElementById('cat-marca-v-outra');
+  if (outro) outro.style.display = v === 'Outra' ? '' : 'none';
+}
 function _togTipoConexao(el) {
   togOpt(el, 'cat-tip-con');
   const inp = document.getElementById('cat-tip-con-outro');
@@ -2959,7 +3039,7 @@ async function salvarItemCatalogo() {
       if (!outra) { showToast('Informe a marca quando selecionar Outra', 'err'); return; }
       marca = outra;
     }
-    const calib = getTogVal('cat-calib') === 'Sim' ? 'true' : 'false';
+    const calib = 'false'; // calibração definida pelo inspetor no Field, não no catálogo
     const modelo = document.getElementById('cat-modelo')?.value?.trim() || '';
 
     payload.tipo_subtipo = subtipo; // descartado abaixo; só uso interno
@@ -2979,37 +3059,58 @@ async function salvarItemCatalogo() {
 
   // ─── VÁLVULA ─────────────────────────────────────────────────
   else if (tipo === 'valvula') {
+    const tipoValv = getTogVal('cat-tip-valv') || 'Segurança';
     const bitE   = document.getElementById('cat-bit-ent')?.value || '1/2"';
     const bitS   = document.getElementById('cat-bit-sai')?.value || '1/2"';
     const tipoE  = getTogVal('cat-tip-ent-v') || 'Roscada';
     const tipoS  = getTogVal('cat-tip-sai-v') || 'Roscada';
-    let fluido   = getTogVal('cat-fluido-v')  || 'AR';
+    const tipoR  = getTogVal('cat-tip-rosca-v') || 'NPT';
+    let fluido   = getTogVal('cat-fluido-v') || 'AR';
     if (fluido === 'Gás' || fluido === 'Líquido' || fluido === 'Outros') {
       const esp = document.getElementById('cat-flu-esp-v')?.value?.trim();
       if (!esp) { showToast('Especifique o fluido (' + fluido + ')', 'err'); return; }
       fluido = (fluido === 'Outros') ? esp : (fluido + ': ' + esp);
     }
-    const pa  = document.getElementById('cat-pa')?.value || '';
-    const mat = getTogVal('cat-mat') || 'Aço inox';
-    let marca = document.getElementById('cat-marca-v')?.value || 'Leser';
+    const mat    = getTogVal('cat-mat') || 'Aço inox';
+    let marca    = document.getElementById('cat-marca-v')?.value || 'Swagelok';
     if (marca === 'Outra') {
       const outra = document.getElementById('cat-marca-v-outra')?.value?.trim();
-      if (!outra) { showToast('Informe a marca quando selecionar Outra', 'err'); return; }
+      if (!outra) { showToast('Informe a marca', 'err'); return; }
       marca = outra;
     }
     const modelo = document.getElementById('cat-modelo-v')?.value?.trim() || '';
+    const pmta   = document.getElementById('cat-pmta-v')?.value || '';
+    const pmtaU  = document.getElementById('cat-pmta-v-unit')?.value || 'kgf/cm²';
 
-    // Aba CAT_VALVULAS não tem colunas separadas tipo_entrada/tipo_saida.
-    // Estratégia compatível: concatenar tipo na própria bitola.
-    payload.bitola_ent = `${bitE} ${tipoE}`;
-    payload.bitola_sai = `${bitS} ${tipoS}`;
-    payload.fluido     = fluido;
-    payload.pa_kgf     = pa;
-    payload.material   = mat;
-    payload.marca      = marca;
-    payload.modelo     = modelo;
-    payload.requer_calibracao = 'true';
-    payload.desc_curta = `Válvula ${bitE} ${tipoE}→${bitS} ${tipoS} · ${fluido} · PA=${pa}kgf · ${mat} · ${marca}${modelo ? ' ' + modelo : ''}`;
+    let pa = '', pa_unit = 'kgf/cm²', pa_alivio = '', pa_alivio_unit = 'kgf/cm²', pa_vacuo = '', pa_vacuo_unit = 'kgf/cm²';
+    if (tipoValv === 'Alívio/Quebra vácuo') {
+      pa_alivio      = document.getElementById('cat-pa-alivio')?.value || '';
+      pa_alivio_unit = document.getElementById('cat-pa-alivio-unit')?.value || 'kgf/cm²';
+      pa_vacuo       = document.getElementById('cat-pa-vacuo')?.value || '';
+      pa_vacuo_unit  = document.getElementById('cat-pa-vacuo-unit')?.value || 'kgf/cm²';
+      if (!pa_alivio || !pa_vacuo) { showToast('Informe PA de alívio e de vácuo', 'err'); return; }
+      pa = `PA=${pa_alivio}${pa_alivio_unit} / PV=${pa_vacuo}${pa_vacuo_unit}`;
+    } else {
+      pa      = document.getElementById('cat-pa')?.value || '';
+      pa_unit = document.getElementById('cat-pa-unit')?.value || 'kgf/cm²';
+      if (!pa) { showToast('Informe a pressão de abertura', 'err'); return; }
+      pa = `${pa} ${pa_unit}`;
+    }
+
+    payload.tipo_valv       = tipoValv;
+    payload.bitola_ent      = `${bitE} ${tipoE} ${tipoR}`;
+    payload.bitola_sai      = `${bitS} ${tipoS}`;
+    payload.fluido          = fluido;
+    payload.pa_kgf          = pa;
+    payload.pa_alivio       = pa_alivio ? `${pa_alivio} ${pa_alivio_unit}` : '';
+    payload.pa_vacuo        = pa_vacuo  ? `${pa_vacuo} ${pa_vacuo_unit}` : '';
+    payload.pmta            = pmta ? `${pmta} ${pmtaU}` : '';
+    payload.material        = mat;
+    payload.marca           = marca;
+    payload.modelo          = modelo;
+    payload.requer_calibracao = 'true'; // válvulas sempre requerem calibração no cadastro; inspetor pode alterar no Field
+    payload.desc_curta = `Válvula ${tipoValv} ${bitE} ${tipoR} · ${fluido} · ${pa} · ${mat} · ${marca}${modelo ? ' ' + modelo : ''}`;
+    payload._tipo_dado = 'Válvula de Segurança';
   }
 
   // ─── PURGADOR ────────────────────────────────────────────────
@@ -3639,7 +3740,7 @@ async function avancarStatus(itemId, novoStatus) {
 
   const old = item.status;
   if (novoStatus === 'em_campo_f2') {
-    const abrir = confirm('Para enviar itens ao FieldTap em Fase 2, use o envio formal da OS. É necessário selecionar o técnico responsável para evitar inconsistências.\n\nClique em OK para abrir o envio formal da Fase 2, ou Cancelar para voltar.');
+    const abrir = confirm('Para enviar itens ao TapControl Field em Fase 2, use o envio formal da OS. É necessário selecionar o técnico responsável para evitar inconsistências.\n\nClique em OK para abrir o envio formal da Fase 2, ou Cancelar para voltar.');
     if (abrir && item.id_os) abrirModalFase2(item.id_os);
     return;
   }
@@ -3677,7 +3778,7 @@ async function avancarStatus(itemId, novoStatus) {
     if (os && !isOSEncerrada(os)) {
       const toastEl = document.getElementById('toast');
       if (toastEl) {
-        showActionToast('Item marcado como Pronto p/ Campo. Para aparecer no FieldTap, envie formalmente a Fase 2 da OS e selecione o técnico.', 'Enviar Fase 2 agora', () => abrirModalFase2(item.id_os), 7000);
+        showActionToast('Item marcado como Pronto p/ Campo. Para aparecer no TapControl Field, envie formalmente a Fase 2 da OS e selecione o técnico.', 'Enviar Fase 2 agora', () => abrirModalFase2(item.id_os), 7000);
       }
     }
   }
@@ -3803,6 +3904,37 @@ function openDrawer(itemId) {
     <div class="info-row"><span class="ir-label">Laboratório</span><span class="ir-val">${item.lab_calibracao||'Interno (bancada)'}</span></div>` :
     (item.requer_calibracao ? `<div class="section-hdr">Calibração e Lacre</div>
     <div class="warn-box">⚠ ${item.status==='em_calibracao'?'Item em processo de calibração — aguardando registro.':'Calibração NR-13 pendente para este item.'}</div>` : '')}
+
+    ${(() => {
+      let extra = '';
+      if (item.conexoes_montagem) {
+        try {
+          const conexoes = JSON.parse(item.conexoes_montagem);
+          if (Array.isArray(conexoes) && conexoes.length > 0) {
+            const linhas = conexoes.map(c =>
+              `<div class="info-row"><span class="ir-label">${c.tipo} ${c.bitola}</span><span class="ir-val">${c.material} · Qtd: ${c.qtd}${c.obs?' · '+c.obs:''}</span></div>`
+            ).join('');
+            extra += `<div class="section-hdr">Conexões de Montagem</div>${linhas}`;
+          }
+        } catch(e) {}
+      }
+      if (item.itens_adicionais) {
+        try {
+          const adicionais = JSON.parse(item.itens_adicionais);
+          const LABELS = {
+            placa_indelevel:'Placa Indelével', placa_tag:'Placa de Tag', lacre_seguranca:'Lacre de Segurança',
+            certificado:'Certificado de Calibração', suporte:'Suporte/Sela', silicone_veda:'Veda-rosca/Silicone',
+            manopla:'Manopla de bloqueio', outro_adicional:'Outro'
+          };
+          const selecionados = Object.entries(adicionais).filter(([k,v]) => v && !k.startsWith('_')).map(([k]) => LABELS[k]||k);
+          if (selecionados.length > 0) {
+            extra += `<div class="section-hdr">Itens Adicionais</div>
+    <div class="info-row"><span class="ir-val">${selecionados.join(' · ')}${adicionais._outro_desc?' ('+adicionais._outro_desc+')':''}</span></div>`;
+          }
+        } catch(e) {}
+      }
+      return extra;
+    })()}
   `;
 
   // Footer: only secondary actions, NO quick status chips
@@ -3865,7 +3997,7 @@ async function confirmarMudancaStatus(itemId) {
   if (!novoStatus) return;
   if (novoStatus === 'em_campo_f2') {
     const item = DB.itens.find(i => i.id_item === itemId);
-    const abrir = confirm('Para enviar itens ao FieldTap em Fase 2, use o envio formal da OS. É necessário selecionar o técnico responsável para evitar inconsistências.\n\nClique em OK para abrir o envio formal da Fase 2, ou Cancelar para voltar.');
+    const abrir = confirm('Para enviar itens ao TapControl Field em Fase 2, use o envio formal da OS. É necessário selecionar o técnico responsável para evitar inconsistências.\n\nClique em OK para abrir o envio formal da Fase 2, ou Cancelar para voltar.');
     if (abrir && item?.id_os) abrirModalFase2(item.id_os);
     return;
   }
@@ -4281,7 +4413,7 @@ const VIEW_CONFIG = {
   os:            { title: 'Ordens de Serviço',           btnLabel: '+ Nova OS',          newFn: () => abrirModalOS() },
   equipamentos:  { title: 'Equipamentos',                btnLabel: '+ Novo Equipamento', newFn: () => abrirModalEquip() },
   tecnicos:      { title: 'Técnicos de Campo',           btnLabel: '+ Novo Técnico',     newFn: () => abrirModalTecnico() },
-  levantamentos: { title: 'Levantamentos FieldTap',      btnLabel: '📋 Buscar Levantamentos',   newFn: () => syncLevantamentos().then(renderLevantamentos) },
+  levantamentos: { title: 'Levantamentos TapControl Field', btnLabel: '📋 Buscar Levantamentos',   newFn: () => syncLevantamentos().then(renderLevantamentos) },
   catalogo:      { title: 'Catálogo de Peças',           btnLabel: '+ Novo Item',        newFn: () => abrirModalCatalogo() },
   kits:          { title: 'Kits de Instalação',          btnLabel: '+ Novo Kit',         newFn: () => abrirModalKit() },
   historico:     { title: 'Histórico / Banco de Dados',   btnLabel: '🔄 Atualizar',        newFn: () => buscarHistoricoOS() },
@@ -4471,7 +4603,7 @@ async function confirmarFase2() {
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
   try {
-    if (!tecnicoF2) throw new Error('Selecione o técnico responsável antes de enviar a OS ao FieldTap.');
+    if (!tecnicoF2) throw new Error('Selecione o técnico responsável antes de enviar a OS ao TapControl Field.');
     const prontos = (DB.itens || []).filter(it => it.id_os === idOS && it.status === 'pronto_campo');
     if (!prontos.length) throw new Error('Nenhum item pronto para campo nesta OS.');
 
@@ -4485,7 +4617,7 @@ async function confirmarFase2() {
     if (GAS_URL && prontos.length) {
       for (const it of prontos) {
         try {
-          const ri = await gasPost('atualizarStatusItem', { id_item: it.id_item, novo_status: 'em_campo_f2', origem: 'ENVIO_FORMAL_FASE2', autorizacao_fase2: true, responsavel: 'TapParts', observacao: `Enviado formalmente ao FieldTap na Fase 2 para o técnico ${tecnicoF2}` });
+          const ri = await gasPost('atualizarStatusItem', { id_item: it.id_item, novo_status: 'em_campo_f2', origem: 'ENVIO_FORMAL_FASE2', autorizacao_fase2: true, responsavel: 'TapControl Manager', observacao: `Enviado formalmente ao TapControl Field na Fase 2 para o técnico ${tecnicoF2}` });
           if (!ri || ri.status !== 'ok') falhas.push(it.id_item);
         } catch(e) { falhas.push(it.id_item); }
       }
@@ -4503,14 +4635,14 @@ async function confirmarFase2() {
     closeModal('modal-fase2');
     renderOS(); renderDashboard(); renderPipeline(); updateBadges();
     if (GAS_URL) { try { await syncGAS(); } catch(e) {} }
-    showToast('✅ Fase 2 enviada ao FieldTap');
+    showToast('✅ Fase 2 enviada ao TapControl Field');
   } catch (e) {
-    showToast(e.message || 'Erro ao enviar Fase 2 ao FieldTap', 'err');
-    if (btn) { btn.disabled = false; btn.textContent = btnTxt || '🚗 Enviar Fase 2 ao FieldTap'; }
+    showToast(e.message || 'Erro ao enviar Fase 2 ao TapControl Field', 'err');
+    if (btn) { btn.disabled = false; btn.textContent = btnTxt || '🚗 Enviar Fase 2 ao TapControl Field'; }
     return;
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = btnTxt || '🚗 Enviar Fase 2 ao FieldTap'; }
+  if (btn) { btn.disabled = false; btn.textContent = btnTxt || '🚗 Enviar Fase 2 ao TapControl Field'; }
 }
 
 // Sprint 8: retroceder OS de Fase 2 para Fase 1
