@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TapControl Manager — S19.0 — Engetap</title>
+<title>TapControl Manager — S19.1 — Engetap</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -455,7 +455,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <div class="gas-dot spin" id="gasDot"></div>
       <span id="gasLabel">Conectando ao GAS…</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;opacity:.5">TapControl Manager · S19.0</div>
+    <div style="margin-top:6px;font-size:10px;opacity:.5">TapControl Manager · S19.1</div>
   </div>
 </div>
 
@@ -2254,6 +2254,32 @@ async function verDetalheLev(idLev) {
           ${calib ? '<span class="pill pill-warn" style="font-size:10px">Calibração NR-13</span>' : ''}
           ${it.id_kit ? '<span class="pill pill-gray" style="font-size:10px">Kit incl.</span>' : ''}
         </div>
+        ${(() => {
+          let html_extra = '';
+          // Correção 1 — conexões de montagem
+          if (it.conexoes_montagem) { try {
+            const cx = JSON.parse(it.conexoes_montagem);
+            if (Array.isArray(cx) && cx.length) {
+              html_extra += `<div style="font-size:11px;color:var(--text2);margin-top:6px">🔗 Conexões: ` +
+                cx.map(c => `${c.tipo} ${c.bitola} · ${c.material} · Qtd: ${c.qtd}`).join('<br>') + `</div>`;
+            }
+          } catch(e){} }
+          // Correção 1 — itens adicionais do acessório
+          if (it.itens_adicionais) { try {
+            const ad = JSON.parse(it.itens_adicionais);
+            const AL = { placa_indelevel:'Placa Indelével', placa_tag:'Placa de Tag', lacre_seguranca:'Lacre de Segurança', certificado:'Certificado', suporte:'Suporte/Sela', silicone_veda:'Veda-rosca/Silicone', manopla:'Manopla', outro_adicional:'Outro' };
+            const sel = Object.entries(ad).filter(([k,v]) => v && !k.startsWith('_')).map(([k]) => AL[k]||k);
+            if (sel.length) html_extra += `<div style="font-size:11px;color:var(--text2);margin-top:4px">🧩 Adicionais: ${sel.join(' · ')}${ad._outro_desc?' ('+ad._outro_desc+')':''}</div>`;
+          } catch(e){} }
+          // Correção 4 — itens do equipamento
+          if (it.itens_equipamento) { try {
+            const eq = JSON.parse(it.itens_equipamento);
+            const EL = { placa_indelevel:'Placa Indelével', placa_tag:'Placa de Tag / Categoria' };
+            const sel = Object.entries(eq).filter(([k,v]) => v && EL[k]).map(([k]) => EL[k]);
+            if (sel.length) html_extra += `<div style="font-size:11px;color:var(--accent2);margin-top:4px">🏷️ Equip.: ${sel.join(' · ')}</div>`;
+          } catch(e){} }
+          return html_extra;
+        })()}
         <code style="display:block;font-size:10px;color:var(--text3);margin-top:6px">${it.id_item}</code>
       </div>`;
     });
@@ -3944,6 +3970,18 @@ function openDrawer(itemId) {
           if (selecionados.length > 0) {
             extra += `<div class="section-hdr">Itens Adicionais</div>
     <div class="info-row"><span class="ir-val">${selecionados.join(' · ')}${adicionais._outro_desc?' ('+adicionais._outro_desc+')':''}</span></div>`;
+          }
+        } catch(e) {}
+      }
+      // Correção 4 — itens do equipamento no drawer individual
+      if (item.itens_equipamento) {
+        try {
+          const eq = JSON.parse(item.itens_equipamento);
+          const EQ_LABELS = { placa_indelevel: 'Placa Indelével', placa_tag: 'Placa de Tag / Categoria' };
+          const sel = Object.entries(eq).filter(([k,v]) => v && EQ_LABELS[k]).map(([k]) => EQ_LABELS[k]);
+          if (sel.length > 0) {
+            extra += `<div class="section-hdr">Itens do Equipamento</div>
+    <div class="info-row"><span class="ir-val">🏷️ ${sel.join(' · ')}</span></div>`;
           }
         } catch(e) {}
       }
