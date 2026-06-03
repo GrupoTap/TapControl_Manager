@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TapControl Manager — S22.0 — Engetap</title>
+<title>TapControl Manager — S23.1 — Engetap</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -403,8 +403,8 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
   <div class="sidebar-logo">
     <div class="logo-badge">TAP</div>
     <div>
-      <div class="logo-name">Parts</div>
-      <div class="logo-sub">Engetap · S22.0</div>
+      <div class="logo-name">Manager</div>
+      <div class="logo-sub">Engetap · S23.1</div>
     </div>
   </div>
 
@@ -943,6 +943,10 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <input type="hidden" id="tec-id">
       <label class="field-label">Nome completo *</label>
       <input type="text" id="tec-nome" placeholder="Ex.: João Silva">
+      <div id="tec-pin-atual-wrap" style="display:none;margin-bottom:8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">PIN Atual</span>
+        <span id="tec-pin-atual-val" style="margin-left:10px;font-family:monospace;font-size:14px;font-weight:700;color:var(--text);letter-spacing:3px"></span>
+      </div>
       <label class="field-label" id="tec-pin-label">PIN de acesso (4–6 dígitos) *</label>
       <input type="text" id="tec-pin" placeholder="Ex.: 1234" maxlength="6" pattern="[0-9]*" inputmode="numeric">
       <p id="tec-pin-hint" style="font-size:11px;color:var(--text3);margin-top:2px">Deixe em branco para manter o PIN atual ao editar.</p>
@@ -1460,7 +1464,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
 // ═══════════════════════════════════════════════════════════════
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzaYkBqamEi21pTaBl_LYAhj9JkkxwFGfapWMrUCnfTCA7BMV9O5D0fWQeQP2fmGnKd/exec'; // TODO: colar URL do GAS aqui
 // S17.2-Beta-RC1 — Cliente nos levantamentos, remoção real, fix salvarItemCatalogo, bloqueio dups, Registro Segurança
-const APP_VERSION = 'S22.0';
+const APP_VERSION = 'S23.1';
 // Logo Engetap em PNG base64 — não há ColectTap Manager v1.19 disponível neste recorte do repo.
 const LOGO_ENGETAP_B64 = '';
 window.CACHE = window.CACHE || {};
@@ -1476,10 +1480,7 @@ let DB = {
   equipamentos: [],
   levantamentos: [],
   itens: [],
-  inspetores: [
-    { id: 'INS-001', nome: 'João Silva',     ativo: 'true' },
-    { id: 'INS-002', nome: 'Maria Oliveira', ativo: 'true' },
-  ],
+  inspetores: [],
   catalogo: {
     manometro: [],
     valvula: [],
@@ -1492,22 +1493,9 @@ let DB = {
 
 // Dados de demonstração
 function initDemoData() {
-  DB.clientes = [
-    { id_cliente:'CLI-001', nome:'Gerdau — Divinópolis', cnpj:'33.611.500/0100-00', contato:'José Alves · (37) 3221-0001', endereco:'Av. Siderurgistas, 100 — Divinópolis MG', obs:'Cliente premium. Contato com 3 dias de antecedência.', ativo:true },
-    { id_cliente:'CLI-002', nome:'Farmax Farmacêutica', cnpj:'42.120.830/0001-21', contato:'Carlos Mota · (37) 3222-5544', endereco:'Rua Industrial, 450 — Divinópolis MG', obs:'Acesso por portaria B.', ativo:true },
-    { id_cliente:'CLI-003', nome:'Stellantis Brasil', cnpj:'30.731.171/0001-52', contato:'Ana Barbosa · (37) 3224-8800', endereco:'Rod. BR-262, Km 660 — Betim MG', obs:'', ativo:true },
-  ];
-  DB.os = [
-    { id_os:'OS-001', id_cliente:'CLI-001', cliente:'Gerdau — Divinópolis', numero_os:'2067', descricao:'Inspeção periódica NR-13 — vasos de pressão linha A', data_abertura:'2026-04-20', status:'Fase 1', fase_atual:1 },
-    { id_os:'OS-002', id_cliente:'CLI-002', cliente:'Farmax Farmacêutica', numero_os:'2110', descricao:'Instalação de manômetros e válvulas de segurança', data_abertura:'2026-04-28', status:'Fase 1', fase_atual:1 },
-    { id_os:'OS-003', id_cliente:'CLI-003', cliente:'Stellantis Brasil', numero_os:'1998', descricao:'Levantamento geral NR-13', data_abertura:'2026-03-10', status:'Encerrada', fase_atual:2 },
-  ];
-  DB.equipamentos = [
-    { id_equipamento:'EQ-001', id_cliente:'CLI-001', id_os:'OS-001', cliente:'Gerdau — Divinópolis', tipo:'Vaso de pressão', tag:'VP-01', localizacao:'Sala de compressores — Linha A', pmta:'10.5', campo_livre:'Compressor de ar — Schulz' },
-    { id_equipamento:'EQ-002', id_cliente:'CLI-001', id_os:'OS-001', cliente:'Gerdau — Divinópolis', tipo:'Vaso de pressão', tag:'VP-02', localizacao:'Sala de compressores — Linha A', pmta:'8.0', campo_livre:'Vaso pulmão' },
-    { id_equipamento:'EQ-003', id_cliente:'CLI-002', id_os:'OS-002', cliente:'Farmax Farmacêutica', tipo:'Caldeira', tag:'CAL-01', localizacao:'Casa de caldeiras', pmta:'6.0', campo_livre:'Caldeira a vapor — Clayton' },
-    { id_equipamento:'EQ-004', id_cliente:'CLI-003', id_os:'OS-003', cliente:'Stellantis Brasil', tipo:'Vaso de pressão', tag:'ACH-301', localizacao:'Linha de pintura — setor 4', pmta:'12.0', campo_livre:'' },
-  ];
+  DB.clientes = [];
+  DB.os = [];
+  DB.equipamentos = [];
   DB.catalogo = {
     manometro: [
       { id:'MAN-001', nome:'Manômetro Glicerinado 63mm', detalhe:'1/4" NPT · Reta · 0–14 kgf/cm²', marca:'Wika', ativo:true, badges:['Glicerinado','63mm','1/4"','0–14 kgf'], calib:false, tipo:'Manômetro' },
@@ -1541,31 +1529,8 @@ function initDemoData() {
     { id:'KIT-003', nome:'Kit Simples 1/2" NPT', bitola:'1/2" NPT', tipo_kit:'simples', componentes:['Niple 1/2" NPT (x2)','Joelho 1/2" 90°'], inclui_rs:false, ativo:true },
     { id:'KIT-004', nome:'Kit DCBI 1/2" NPT', bitola:'1/2" NPT', tipo_kit:'dcbi', componentes:['Niple 1/2" NPT (x3)','Joelho 1/2" 90°','Válvula agulha 1/2" (x3)'], inclui_rs:true, ativo:true },
   ];
-  DB.levantamentos = [
-    {
-      id_levantamento: 'LEV-2026-001', id_os: 'OS-001', id_cliente: 'CLI-001',
-      id_inspetor: 'INS-001', nome_inspetor: 'João Silva', fase: '1',
-      timestamp_envio: '2026-04-21T10:30:00', total_itens: 4, status_geral: 'aguardando_cotacao',
-      resumo_status: { aguardando_cotacao: 3, instalado_campo: 1 }
-    },
-    {
-      id_levantamento: 'LEV-2026-002', id_os: 'OS-002', id_cliente: 'CLI-002',
-      id_inspetor: 'INS-002', nome_inspetor: 'Maria Oliveira', fase: '1',
-      timestamp_envio: '2026-04-29T14:15:00', total_itens: 2, status_geral: 'aguardando_cotacao',
-      resumo_status: { aguardando_cotacao: 2 }
-    },
-  ];
-  DB.itens = [
-    { id_item:'ACE-2026-001', id_levantamento:'LEV-2026-001', id_os:'OS-001', id_equipamento:'EQ-001', tag_equipamento:'VP-01', cliente:'Gerdau — Divinópolis', tipo_acessorio:'Manômetro', descricao_curta:'Manômetro Glicerinado 100mm · 1/4" NPT · 0–14 kgf', quantidade:2, requer_calibracao:false, instalado_imediatamente:false, status:'aguardando_cotacao', fornecedor:'', valor_cotado:'', prazo_entrega:'', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-002', id_levantamento:'LEV-2026-001', id_os:'OS-001', id_equipamento:'EQ-001', tag_equipamento:'VP-01', cliente:'Gerdau — Divinópolis', tipo_acessorio:'Válvula de Segurança', descricao_curta:'Válvula Seg. 1/2" AR · PA=10 kgf · Aço inox · Leser', quantidade:1, requer_calibracao:true, instalado_imediatamente:false, status:'em_calibracao', fornecedor:'Leser Brasil', valor_cotado:'420.00', prazo_entrega:'7 dias úteis', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-003', id_levantamento:'LEV-2026-001', id_os:'OS-001', id_equipamento:'EQ-002', tag_equipamento:'VP-02', cliente:'Gerdau — Divinópolis', tipo_acessorio:'Manômetro', descricao_curta:'Manômetro Glicerinado 63mm · 1/4" NPT · 0–14 kgf', quantidade:1, requer_calibracao:false, instalado_imediatamente:true, status:'instalado_campo', fornecedor:'', valor_cotado:'', prazo_entrega:'', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-004', id_levantamento:'LEV-2026-001', id_os:'OS-001', id_equipamento:'EQ-002', tag_equipamento:'VP-02', cliente:'Gerdau — Divinópolis', tipo_acessorio:'DCBI', descricao_curta:'DCBI 1/4" Completo — válvula tripartida + niples + joelho + lacre', quantidade:1, requer_calibracao:false, instalado_imediatamente:false, status:'aprovado_cliente', fornecedor:'Engetap (estoque)', valor_cotado:'85.00', prazo_entrega:'Imediato', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-005', id_levantamento:'LEV-2026-002', id_os:'OS-002', id_equipamento:'EQ-003', tag_equipamento:'CAL-01', cliente:'Farmax Farmacêutica', tipo_acessorio:'Manômetro', descricao_curta:'Manômetro Glicerinado 100mm Angular · 1/2" NPT · 0–21 kgf', quantidade:3, requer_calibracao:false, instalado_imediatamente:false, status:'aguardando_cotacao', fornecedor:'', valor_cotado:'', prazo_entrega:'', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-006', id_levantamento:'LEV-2026-002', id_os:'OS-002', id_equipamento:'EQ-003', tag_equipamento:'CAL-01', cliente:'Farmax Farmacêutica', tipo_acessorio:'Válvula de Segurança', descricao_curta:'Válvula Seg. 3/4" AR · PA=8 kgf · Aço inox · Leser', quantidade:1, requer_calibracao:true, instalado_imediatamente:false, status:'pecas_recebidas', fornecedor:'Leser Brasil', valor_cotado:'380.00', prazo_entrega:'5 dias úteis', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'' },
-    { id_item:'ACE-2026-007', id_levantamento:'LEV-2026-001', id_os:'OS-001', id_equipamento:'EQ-001', tag_equipamento:'VP-01', cliente:'Gerdau — Divinópolis', tipo_acessorio:'Válvula de Segurança', descricao_curta:'Válvula Seg. 1/2" AR · PA=10 kgf — alta pressão', quantidade:1, requer_calibracao:true, instalado_imediatamente:true, status:'calibrado', fornecedor:'', valor_cotado:'', prazo_entrega:'', data_calibracao:'2026-04-22', num_certificado:'CERT-2026-0341', num_lacre:'LAC-0080', validade_calibracao:'2027-04-22', lab_calibracao:'' },
-    { id_item:'ACE-2026-008', id_levantamento:'LEV-2026-002', id_os:'OS-002', id_equipamento:'EQ-004', tag_equipamento:'TQ-01', cliente:'Farmax Farmacêutica', tipo_acessorio:'Válvula de Segurança', descricao_curta:'Válvula Seg. 1" Vapor · PA=6 kgf · Aço carbono · Farago', quantidade:2, requer_calibracao:true, instalado_imediatamente:false, status:'em_calibracao', fornecedor:'Farago', valor_cotado:'290.00', prazo_entrega:'10 dias', data_calibracao:'', num_certificado:'', num_lacre:'', validade_calibracao:'', lab_calibracao:'Metrológica MG' },
-    { id_item:'ACE-2026-009', id_levantamento:'LEV-2026-002', id_os:'OS-002', id_equipamento:'EQ-003', tag_equipamento:'CAL-01', cliente:'Farmax Farmacêutica', tipo_acessorio:'Válvula de Segurança', descricao_curta:'Válvula Seg. 3/4" Vapor · PA=5 kgf · Inox · Leser (vencida)', quantidade:1, requer_calibracao:true, instalado_imediatamente:false, status:'calibrado', fornecedor:'', valor_cotado:'', prazo_entrega:'', data_calibracao:'2024-01-10', num_certificado:'CERT-2024-0099', num_lacre:'LAC-0031', validade_calibracao:'2025-01-10', lab_calibracao:'' },
-  ];
+  DB.levantamentos = [];
+  DB.itens = [];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2578,6 +2543,7 @@ function abrirModalTecnico(id) {
   document.getElementById('tec-id').value = '';
   document.getElementById('tec-nome').value = '';
   document.getElementById('tec-pin').value = '';
+  document.getElementById('tec-pin-atual-wrap').style.display = 'none';
   document.getElementById('tec-modal-title').textContent = '👷 Novo Técnico de Campo';
   document.getElementById('tec-pin-label').textContent = 'PIN de acesso (4–6 dígitos) *';
   document.getElementById('tec-pin-hint').style.display = 'none';
@@ -2593,6 +2559,15 @@ function editarTecnico(id) {
   document.getElementById('tec-modal-title').textContent = '✏️ Editar Técnico — ' + t.nome;
   document.getElementById('tec-pin-label').textContent = 'Novo PIN (deixe em branco para manter o atual)';
   document.getElementById('tec-pin-hint').style.display = 'block';
+  // Mostrar PIN atual se disponível
+  const pinAtualWrap = document.getElementById('tec-pin-atual-wrap');
+  const pinAtualVal  = document.getElementById('tec-pin-atual-val');
+  if (t.pin && pinAtualWrap && pinAtualVal) {
+    pinAtualVal.textContent = t.pin;
+    pinAtualWrap.style.display = 'block';
+  } else if (pinAtualWrap) {
+    pinAtualWrap.style.display = 'none';
+  }
   openModal('modal-tecnico');
 }
 
@@ -2616,9 +2591,12 @@ async function salvarTecnico() {
       // Atualiza DB local
       if (id) {
         const idx = DB.inspetores.findIndex(x => x.id === id);
-        if (idx >= 0) DB.inspetores[idx].nome = nome;
+        if (idx >= 0) {
+          DB.inspetores[idx].nome = nome;
+          if (pin) DB.inspetores[idx].pin = pin;
+        }
       } else {
-        DB.inspetores.push({ id: r.id, nome, ativo: 'true' });
+        DB.inspetores.push({ id: r.id, nome, pin: pin || '', ativo: 'true' });
       }
     } catch(e) {
       showToast('Falha na comunicação com GAS', 'err'); return;
@@ -2627,10 +2605,13 @@ async function salvarTecnico() {
     // Modo local
     if (id) {
       const idx = DB.inspetores.findIndex(x => x.id === id);
-      if (idx >= 0) DB.inspetores[idx].nome = nome;
+      if (idx >= 0) {
+        DB.inspetores[idx].nome = nome;
+        if (pin) DB.inspetores[idx].pin = pin;
+      }
     } else {
       const newId = 'INS-' + String(DB.inspetores.length + 1).padStart(3, '0');
-      DB.inspetores.push({ id: newId, nome, ativo: 'true' });
+      DB.inspetores.push({ id: newId, nome, pin: pin || '', ativo: 'true' });
     }
   }
   closeModal('modal-tecnico');
