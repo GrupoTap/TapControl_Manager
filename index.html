@@ -825,6 +825,15 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
           <option value="sim">Requer calibração</option>
           <option value="nao">Sem calibração</option>
         </select>
+        <select class="filter-select" id="pipe-tipo-filter" onchange="renderPipeline()" style="min-width:170px">
+          <option value="">Todos os tipos</option>
+          <option value="Manômetro">Manômetros</option>
+          <option value="Válvula de Segurança">Válvulas de Segurança</option>
+          <option value="Purgador">Purgadores</option>
+          <option value="DCBI">DCBIs</option>
+          <option value="Conexão">Conexões</option>
+          <option value="Item personalizado">Itens personalizados</option>
+        </select>
         <select class="filter-select" id="pipe-cli-filter" onchange="renderPipeline()" style="min-width:160px">
           <option value="">Todos os clientes</option>
         </select>
@@ -832,7 +841,10 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <div class="pipe-table-wrap">
         <div class="table-header">
           <h3>Itens do Pipeline</h3>
-          <span class="th-meta" id="pipe-count">0 itens</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="th-meta" id="pipe-count">0 itens</span>
+            <button class="btn btn-ghost btn-sm" onclick="gerarPDFCotacao()" title="Gerar PDF com itens filtrados para cotação" style="font-size:12px">📄 Gerar PDF de Cotação</button>
+          </div>
         </div>
         <table>
           <thead>
@@ -2002,59 +2014,63 @@ async function vincularEquipamento() {
   if (!eqId) { showToast('Selecione um equipamento', 'err'); return; }
   const eq = DB.equipamentos.find(e => e.id_equipamento === eqId);
   if (!eq) return;
-  // Correção S12 — usar endpoint explícito vincularEquipamentoOS em vez de salvarEquipamento
-  const old = eq.id_os || '';
-  if (GAS_URL) {
-    try {
+
+  const btnVincular = document.querySelector('[onclick="vincularEquipamento()"]');
+  const txtOriginal = btnVincular ? btnVincular.textContent : '';
+  if (btnVincular) { btnVincular.disabled = true; btnVincular.textContent = 'Vinculando…'; }
+
+  try {
+    if (GAS_URL) {
       const r = await gasPost('vincularEquipamentoOS', {
         id_equipamento: eqId,
         id_os: _osEquipContext,
         responsavel: 'adm',
-        origem: 'TapParts'
+        origem: 'TapControl Manager'
       });
       if (!r || r.status !== 'ok') throw new Error(r?.mensagem || r?.codigo || 'Falha GAS');
-      // Correção S12 — só atualiza DB local APÓS confirmação positiva do GAS
-      eq.id_os = _osEquipContext;
-      await syncGAS(false);
-    } catch(e) {
-      // Correção S12 — não mostra "vinculado ✓" se GAS não confirmou
-      showToast('Erro ao vincular equipamento: ' + e.message, 'err');
-      return;
     }
-  } else {
+
     eq.id_os = _osEquipContext;
+    renderOSEquipList(_osEquipContext);
+    renderOS();
+    renderEquipamentos();
+    renderDashboard();
+    showToast('Equipamento vinculado ✓');
+
+    if (GAS_URL) syncGAS(false).catch(() => {});
+  } catch(e) {
+    showToast('Erro ao vincular equipamento: ' + e.message, 'err');
+  } finally {
+    if (btnVincular) { btnVincular.disabled = false; btnVincular.textContent = txtOriginal; }
   }
-  renderOSEquipList(_osEquipContext);
-  renderOS();
-  renderEquipamentos();
-  renderDashboard();
-  showToast('Equipamento vinculado ✓');
 }
 
 async function desvincularEquip(eqId, idOS) {
   const eq = DB.equipamentos.find(e => e.id_equipamento === eqId);
   if (!eq) return;
-  // Correção S12 — usar endpoint explícito vincularEquipamentoOS com id_os vazio para desvincular
-  const old = eq.id_os || '';
   if (GAS_URL) {
     try {
       const r = await gasPost('vincularEquipamentoOS', {
         id_equipamento: eqId,
         id_os: '',
         responsavel: 'adm',
-        origem: 'TapParts'
+        origem: 'TapControl Manager'
       });
       if (!r || r.status !== 'ok') throw new Error(r?.mensagem || r?.codigo || 'Falha GAS');
-      // Só atualiza DB local APÓS confirmação positiva do GAS
       eq.id_os = '';
-      await syncGAS(false);
+      renderOSEquipList(idOS);
+      renderOS();
+      renderEquipamentos();
+      renderDashboard();
+      showToast('Equipamento desvinculado');
+      syncGAS(false).catch(() => {});
+      return;
     } catch(e) {
       showToast('Erro ao desvincular equipamento: ' + e.message, 'err');
       return;
     }
-  } else {
-    eq.id_os = '';
   }
+  eq.id_os = '';
   renderOSEquipList(idOS);
   renderOS();
   renderEquipamentos();
@@ -2253,6 +2269,8 @@ async function verDetalheLev(idLev) {
           ${inst ? '<span class="pill pill-ok" style="font-size:10px">⚡ Instalado agora</span>' : '<span class="pill pill-blue" style="font-size:10px">📋 Pipeline</span>'}
           ${calib ? '<span class="pill pill-warn" style="font-size:10px">Calibração NR-13</span>' : ''}
           ${it.id_kit ? '<span class="pill pill-gray" style="font-size:10px">Kit incl.</span>' : ''}
+          ${it.foto_equipamento_b64 ? '<span title="Foto do equipamento disponível">📷</span>' : ''}
+          ${it.foto_ponto_instalacao_b64 ? '<span title="Foto do ponto de instalação disponível">🔍</span>' : ''}
         </div>
         ${(() => {
           let html_extra = '';
@@ -3671,6 +3689,7 @@ function renderPipeline() {
   const calibFilter = document.getElementById('pipe-calib-filter')?.value || '';
   // Correção S12 — lê seleção do filtro de cliente (mantido entre chamadas pelo próprio select)
   const cliFilter = document.getElementById('pipe-cli-filter')?.value || '';
+  const tipoFilter = document.getElementById('pipe-tipo-filter')?.value || '';
 
   let data = DB.itens || [];
   if (q) data = data.filter(i =>
@@ -3694,6 +3713,7 @@ function renderPipeline() {
   }
   if (calibFilter === 'sim') data = data.filter(i => i.requer_calibracao);
   if (calibFilter === 'nao') data = data.filter(i => !i.requer_calibracao);
+  if (tipoFilter) data = data.filter(i => (i.tipo_acessorio || '') === tipoFilter);
 
   document.getElementById('pipe-count').textContent = data.length + ' iten' + (data.length !== 1 ? 's' : 's');
 
@@ -3871,6 +3891,123 @@ async function salvarCotacao() {
 // ═══════════════════════════════════════════════════════════════
 let _drawerItemId = null;
 
+
+function gerarPDFCotacao() {
+  const q          = (document.getElementById('pipe-search')?.value || '').toLowerCase();
+  const stFilter   = document.getElementById('pipe-status-filter')?.value || '';
+  const osFilter   = document.getElementById('pipe-os-filter')?.value || '';
+  const calibFilter= document.getElementById('pipe-calib-filter')?.value || '';
+  const cliFilter  = document.getElementById('pipe-cli-filter')?.value || '';
+  const tipoFilter = document.getElementById('pipe-tipo-filter')?.value || '';
+
+  let data = DB.itens || [];
+  if (q) data = data.filter(i =>
+    i.descricao_curta?.toLowerCase().includes(q) ||
+    i.tag_equipamento?.toLowerCase().includes(q) ||
+    i.cliente?.toLowerCase().includes(q) ||
+    i.id_os?.toLowerCase().includes(q) ||
+    i.id_item?.toLowerCase().includes(q));
+  if (stFilter) data = data.filter(i => i.status === stFilter);
+  if (osFilter) data = data.filter(i => i.id_os === osFilter);
+  if (cliFilter) {
+    data = data.filter(i => {
+      if (i.id_cliente && i.id_cliente === cliFilter) return true;
+      const os = DB.os.find(o => o.id_os === i.id_os);
+      if (os && os.id_cliente === cliFilter) return true;
+      const cli = DB.clientes.find(c => c.id_cliente === cliFilter);
+      if (cli && i.cliente && i.cliente.toLowerCase().includes(cli.nome.toLowerCase())) return true;
+      return false;
+    });
+  }
+  if (calibFilter === 'sim') data = data.filter(i => i.requer_calibracao);
+  if (calibFilter === 'nao') data = data.filter(i => !i.requer_calibracao);
+  if (tipoFilter) data = data.filter(i => (i.tipo_acessorio || '') === tipoFilter);
+
+  if (!data.length) { showToast('Nenhum item para gerar PDF com os filtros atuais', 'err'); return; }
+
+  const grupos = {};
+  data.forEach(i => {
+    const tipo = i.tipo_acessorio || 'Outros';
+    if (!grupos[tipo]) grupos[tipo] = [];
+    grupos[tipo].push(i);
+  });
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const empresa = 'Engetap — Serviços de Inspeção NR-13';
+  const partesFiltro = [];
+  if (tipoFilter) partesFiltro.push(tipoFilter + 's');
+  if (osFilter) { const os = DB.os.find(o => o.id_os === osFilter); partesFiltro.push('OS ' + (os?.numero_os || osFilter)); }
+  if (cliFilter) { const cli = DB.clientes.find(c => c.id_cliente === cliFilter); if (cli) partesFiltro.push(cli.nome); }
+  if (stFilter) partesFiltro.push(STATUS_LABEL[stFilter] || stFilter);
+  const tituloFiltro = partesFiltro.length ? ' — ' + partesFiltro.join(' · ') : ' — Todos os itens filtrados';
+
+  let rowsHtml = '';
+  Object.entries(grupos).forEach(([tipo, itens]) => {
+    rowsHtml += `<tr class="grupo-header"><td colspan="6">${tipo}</td></tr>`;
+    itens.forEach((i, idx) => {
+      const os = DB.os.find(o => o.id_os === i.id_os);
+      const osLabel = os?.numero_os ? 'OS ' + os.numero_os : i.id_os;
+      const clienteLabel = os?.cliente || i.cliente || '—';
+      const calibLabel = i.requer_calibracao ? '⚠ Calibração NR-13' : '—';
+      rowsHtml += `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${i.descricao_curta || '—'}</td>
+        <td style="text-align:center">${i.quantidade}</td>
+        <td>${i.tag_equipamento || '—'} · ${osLabel}</td>
+        <td>${clienteLabel}</td>
+        <td>${calibLabel}</td>
+      </tr>`;
+    });
+  });
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <title>Cotação TapControl</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+    .header { border-bottom: 2px solid #1a56db; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .header-left h1 { font-size: 18px; color: #1a56db; }
+    .header-left p { font-size: 11px; color: #555; margin-top: 2px; }
+    .header-right { text-align: right; font-size: 11px; color: #555; }
+    .info-box { background: #f0f4ff; border: 1px solid #c3d5ff; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 11px; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #1a56db; color: white; padding: 7px 8px; text-align: left; font-size: 11px; }
+    td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 11px; vertical-align: top; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    tr.grupo-header td { background: #e8f0fe; color: #1a56db; font-weight: 700; font-size: 12px; padding: 8px; border-top: 2px solid #c3d5ff; }
+    .footer { margin-top: 24px; border-top: 1px solid #ddd; padding-top: 12px; font-size: 10px; color: #888; display: flex; justify-content: space-between; }
+    @media print { body { padding: 10px; } button { display: none; } }
+  </style>
+  </head><body>
+  <div class="header">
+    <div class="header-left"><h1>Pedido de Cotação${tituloFiltro}</h1><p>${empresa}</p></div>
+    <div class="header-right"><strong>Data:</strong> ${hoje}<br><strong>Total de itens:</strong> ${data.length}</div>
+  </div>
+  <div class="info-box">📋 <strong>Instruções:</strong> Favor cotar os itens abaixo conforme especificações. Indicar preço unitário, prazo de entrega e disponibilidade em estoque. Para itens com calibração NR-13, informar se possuem certificado de calibração rastreável à RBC/Inmetro.<br><strong>Enviar proposta para:</strong> ___________________________ &nbsp;&nbsp; <strong>Validade da proposta:</strong> ___________</div>
+  <table><thead><tr><th style="width:30px">#</th><th>Descrição / Especificação</th><th style="width:50px;text-align:center">Qtd</th><th style="width:120px">TAG · OS</th><th style="width:130px">Cliente</th><th style="width:100px">Obs.</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+  <div style="margin-top:16px;border:1px solid #ddd;border-radius:6px;padding:12px"><strong style="font-size:12px">Proposta do fornecedor:</strong><table style="margin-top:8px"><thead><tr><th>#</th><th>Item</th><th>Qtd</th><th>Preço Unit. (R$)</th><th>Preço Total (R$)</th><th>Prazo Entrega</th><th>Obs.</th></tr></thead><tbody>${data.map((i,idx) => `<tr><td>${idx+1}</td><td>${i.descricao_curta||'—'}</td><td>${i.quantidade}</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>`).join('')}</tbody></table></div>
+  <div class="footer"><span>Gerado por TapControl Manager · ${hoje}</span><span>Documento de uso interno — Engetap</span></div>
+  <script>window.onload = () => window.print();<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { showToast('Permita pop-ups para gerar o PDF', 'err'); }
+}
+
+function abrirFotoFullscreen(itemId, tipo) {
+  const item = DB.itens.find(i => i.id_item === itemId);
+  if (!item) return;
+  const src = tipo === 'equip' ? item.foto_equipamento_b64 : item.foto_ponto_instalacao_b64;
+  if (!src) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  overlay.innerHTML = `<img src="${src}" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px">`;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
 function openDrawer(itemId) {
   _drawerItemId = itemId;
   const item = DB.itens.find(i => i.id_item === itemId);
@@ -3984,6 +4121,24 @@ function openDrawer(itemId) {
     <div class="info-row"><span class="ir-val">🏷️ ${sel.join(' · ')}</span></div>`;
           }
         } catch(e) {}
+      }
+      // S21 — Foto do equipamento
+      if (item.foto_equipamento_b64) {
+        extra += `<div class="section-hdr">📷 Foto do Equipamento</div>
+  <div style="margin-bottom:10px">
+    <img src="${item.foto_equipamento_b64}" alt="Foto do equipamento"
+         style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:pointer"
+         onclick="abrirFotoFullscreen('${item.id_item}','equip')">
+  </div>`;
+      }
+      // S21 — Foto do ponto de instalação
+      if (item.foto_ponto_instalacao_b64) {
+        extra += `<div class="section-hdr">📷 Ponto de Instalação</div>
+  <div style="margin-bottom:10px">
+    <img src="${item.foto_ponto_instalacao_b64}" alt="Foto do ponto de instalação"
+         style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:pointer"
+         onclick="abrirFotoFullscreen('${item.id_item}','ponto')">
+  </div>`;
       }
       return extra;
     })()}
@@ -4274,7 +4429,7 @@ async function marcarEmCalibracao() {
   item.status = 'em_calibracao';
   if (GAS_URL) {
     try {
-      await gasPost('atualizarStatusItem', { id_item: itemId, novo_status: 'em_calibracao', responsavel: 'ADM', observacao: 'Marcado como Em Calibração pelo TapParts S4' });
+      await gasPost('atualizarStatusItem', { id_item: itemId, novo_status: 'em_calibracao', responsavel: 'ADM', observacao: 'Marcado como Em Calibração pelo TapControl Manager' });
     } catch(e) {}
   }
   closeModal('modal-calibracao');
@@ -4670,9 +4825,9 @@ async function confirmarFase2() {
     if (!prontos.length) throw new Error('Nenhum item pronto para campo nesta OS.');
 
     if (GAS_URL) {
-      const rt = await gasPost('salvarOS', { id_os: idOS, tecnicos_vinculados: [tecnicoF2], origem: 'TapParts' });
+      const rt = await gasPost('salvarOS', { id_os: idOS, tecnicos_vinculados: [tecnicoF2], origem: 'TapControl Manager' });
       if (!rt || rt.status !== 'ok') throw new Error('Falha ao vincular técnico da Fase 2.');
-      const r = await gasPost('avancarFaseOS', { id_os: idOS, nova_fase: 2, observacao: obs, origem: 'TapParts' });
+      const r = await gasPost('avancarFaseOS', { id_os: idOS, nova_fase: 2, observacao: obs, origem: 'TapControl Manager' });
       if (!r || r.status !== 'ok') throw new Error('Erro ao avançar fase da OS.');
     }
     const falhas = [];
@@ -4788,7 +4943,7 @@ async function confirmarEncerrarOS() {
         teve_faturamento: fat,
         motivo_sem_faturamento: fat === 'nao' ? motivo : '',
         observacao_encerramento: obs,
-        origem_encerramento: 'TapParts'
+        origem_encerramento: 'TapControl Manager'
       });
     } catch(e) { showToast('Aviso: GAS retornou erro (OS encerrada localmente)', 'warn'); }
   }
@@ -4809,7 +4964,7 @@ async function reabrirOS(idOS) {
   if (idx < 0) return;
   if (GAS_URL) {
     try {
-      await gasPost('reabrirOS', { id_os: idOS, origem: 'TapParts' });
+      await gasPost('reabrirOS', { id_os: idOS, origem: 'TapControl Manager' });
     } catch(e) { showToast('Aviso: GAS retornou erro (OS reaberta localmente)', 'warn'); }
   }
   DB.os[idx].status = 'Fase 2 Campo Concluída';
