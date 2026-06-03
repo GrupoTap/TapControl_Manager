@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TapControl Manager — S18.0 — Engetap</title>
+<title>TapControl Manager — S19.0 — Engetap</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -455,7 +455,7 @@ code { font-size: 11px; color: var(--accent); font-family: monospace; }
       <div class="gas-dot spin" id="gasDot"></div>
       <span id="gasLabel">Conectando ao GAS…</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;opacity:.5">TapControl Manager · S18.0</div>
+    <div style="margin-top:6px;font-size:10px;opacity:.5">TapControl Manager · S19.0</div>
   </div>
 </div>
 
@@ -3810,18 +3810,32 @@ async function salvarCotacao() {
   if (!fornecedor || !valor) { showToast('Fornecedor e valor são obrigatórios', 'err'); return; }
   const item = DB.itens.find(i => i.id_item === itemId);
   if (!item) return;
-  item.fornecedor = fornecedor;
+  const oldForn  = item.fornecedor;
+  const oldValor = item.valor_cotado;
+  const oldPrazo = item.prazo_entrega;
+  const oldStatus = item.status;
+  const obs = document.getElementById('cot-obs')?.value?.trim() || '';
+  item.fornecedor   = fornecedor;
   item.valor_cotado = valor;
   item.prazo_entrega = document.getElementById('cot-prazo').value;
-  const old = item.status;
   item.status = 'cotado';
   if (GAS_URL) {
-    try { await gasPost('atualizarDadosAdministrativos', { id_item: itemId, fornecedor, valor_cotado: valor, prazo_entrega: item.prazo_entrega, status_novo: 'cotado', status_anterior: old }); } catch(e) {}
+    try {
+      const r = await gasPost('atualizarDadosAdministrativos', {
+        id_item: itemId, fornecedor, valor_cotado: valor,
+        prazo_entrega: item.prazo_entrega, observacao_cotacao: obs,
+        status_novo: 'cotado', status_anterior: oldStatus
+      });
+      if (!r || r.status !== 'ok') throw new Error(r?.mensagem || 'Erro GAS');
+    } catch(e) {
+      item.fornecedor = oldForn; item.valor_cotado = oldValor;
+      item.prazo_entrega = oldPrazo; item.status = oldStatus;
+      showToast('Falha ao salvar cotação no servidor: ' + e.message, 'err');
+      return;
+    }
   }
   closeModal('modal-cotacao');
-  renderPipeline();
-  renderDashboard();
-  updateBadges();
+  renderPipeline(); renderDashboard(); updateBadges();
   showToast('Cotação registrada ✓');
   if (_drawerItemId === itemId) openDrawer(itemId);
 }
@@ -4253,10 +4267,12 @@ async function salvarCalibracao() {
     });
   }
 
+  const dadosAnt = { data_calibracao: item.data_calibracao, validade_calibracao: item.validade_calibracao, num_certificado: item.num_certificado, num_lacre: item.num_lacre, lab_calibracao: item.lab_calibracao, _tipo_calibracao: item._tipo_calibracao, status: item.status };
   item.data_calibracao    = data;
   item.validade_calibracao = validade;
   item.num_certificado    = document.getElementById('calib-cert').value;
   item.num_lacre          = document.getElementById('calib-lacre').value;
+  item.num_lacre2         = document.getElementById('calib-lacre2')?.value || '';
   item.lab_calibracao     = lab;
   item._tipo_calibracao   = tipo;
   const old = item.status;
@@ -4266,12 +4282,13 @@ async function salvarCalibracao() {
 
   if (GAS_URL) {
     try {
-      await gasPost('registrarCalibracao', {
+      const r = await gasPost('registrarCalibracao', {
         id_item: itemId,
         data_calibracao: data,
         validade_calibracao: validade,
         num_certificado: item.num_certificado,
         num_lacre: item.num_lacre,
+        num_lacre2: item.num_lacre2,
         tipo_calibracao: tipo,
         lab_calibracao: lab,
         responsavel: document.getElementById('calib-resp').value,
@@ -4279,7 +4296,12 @@ async function salvarCalibracao() {
         status_anterior: old,
         status_novo: item.status
       });
-    } catch(e) { showToast('Erro ao salvar no GAS (dados salvos localmente)', 'warn'); }
+      if (!r || r.status !== 'ok') throw new Error(r?.mensagem || 'Erro GAS');
+    } catch(e) {
+      Object.assign(item, dadosAnt);
+      showToast('Falha ao salvar calibração: ' + e.message, 'err');
+      return;
+    }
   }
   closeModal('modal-calibracao');
   renderCalibracao(); renderPipeline(); renderDashboard(); updateBadges();
@@ -4307,21 +4329,23 @@ async function salvarLacre() {
   if (!num) { showToast('Informe o número do lacre', 'err'); return; }
   const item = DB.itens.find(i => i.id_item === itemId);
   if (!item) return;
+  const oldLacre = item.num_lacre;
   item.num_lacre = num;
   if (GAS_URL) {
     try {
-      await gasPost('registrarCalibracao', {
+      const r = await gasPost('registrarLacre', {
         id_item: itemId,
         num_lacre: num,
-        data_calibracao: item.data_calibracao || data,
-        validade_calibracao: item.validade_calibracao || '',
-        num_certificado: item.num_certificado || '',
-        lab_calibracao: item.lab_calibracao || '',
-        tipo_calibracao: 'Lacre avulso',
+        data_lacre: data,
         responsavel: document.getElementById('lacre-resp').value,
         observacao: document.getElementById('lacre-obs').value
       });
-    } catch(e) {}
+      if (!r || r.status !== 'ok') throw new Error(r?.mensagem || 'Erro GAS');
+    } catch(e) {
+      item.num_lacre = oldLacre;
+      showToast('Falha ao registrar lacre: ' + e.message, 'err');
+      return;
+    }
   }
   closeModal('modal-lacre');
   renderCalibracao(); renderPipeline();
